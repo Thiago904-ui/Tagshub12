@@ -1,0 +1,174 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+local flying = false
+local speed = 50
+local toggleKey = Enum.KeyCode.E
+local esperandoTecla = false
+local ajustandoSlider = false
+local moveVector = Vector3.new()
+
+-- UI azul personalizada
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "TagsHubFlyUI"
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 280, 0, 170)
+Frame.Position = UDim2.new(0, 20, 0, 20)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+Frame.Active = true
+Frame.Draggable = true
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Text = "TagsHub Fly"
+Title.Size = UDim2.new(1, -20, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(0, 170, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local ToggleBtn = Instance.new("TextButton", Frame)
+ToggleBtn.Text = "Ativar Voo ("..toggleKey.Name..")"
+ToggleBtn.Size = UDim2.new(0, 130, 0, 35)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 45)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 170)
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+ToggleBtn.Font = Enum.Font.Gotham
+ToggleBtn.TextSize = 16
+
+local ChangeKeyBtn = Instance.new("TextButton", Frame)
+ChangeKeyBtn.Text = "Trocar Tecla"
+ChangeKeyBtn.Size = UDim2.new(0, 120, 0, 35)
+ChangeKeyBtn.Position = UDim2.new(1, -130, 0, 45)
+ChangeKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 170)
+ChangeKeyBtn.TextColor3 = Color3.new(1,1,1)
+ChangeKeyBtn.Font = Enum.Font.Gotham
+ChangeKeyBtn.TextSize = 16
+
+local SpeedLabel = Instance.new("TextLabel", Frame)
+SpeedLabel.Text = "Velocidade: "..speed
+SpeedLabel.Size = UDim2.new(1, -20, 0, 25)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 90)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.new(1,1,1)
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextSize = 16
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local SliderBack = Instance.new("Frame", Frame)
+SliderBack.Size = UDim2.new(1, -20, 0, 10)
+SliderBack.Position = UDim2.new(0, 10, 0, 120)
+SliderBack.BackgroundColor3 = Color3.fromRGB(50, 50, 90)
+
+local SliderBar = Instance.new("Frame", SliderBack)
+SliderBar.Size = UDim2.new((speed - 10)/190, 0, 1, 0)
+SliderBar.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+SliderBar.BorderSizePixel = 0
+
+-- Slider
+local function updateSlider(pos)
+	local relative = math.clamp((pos.X - SliderBack.AbsolutePosition.X) / SliderBack.AbsoluteSize.X, 0, 1)
+	speed = math.floor(10 + relative * 190)
+	SliderBar.Size = UDim2.new((speed - 10)/190, 0, 1, 0)
+	SpeedLabel.Text = "Velocidade: "..speed
+end
+
+SliderBack.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		ajustandoSlider = true
+		updateSlider(input.Position)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if ajustandoSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
+		updateSlider(input.Position)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		ajustandoSlider = false
+	end
+end)
+
+-- Ativação do Fly
+local function toggleFly()
+	flying = not flying
+	ToggleBtn.BackgroundColor3 = flying and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(0, 90, 170)
+end
+
+ToggleBtn.MouseButton1Click:Connect(toggleFly)
+
+ChangeKeyBtn.MouseButton1Click:Connect(function()
+	ChangeKeyBtn.Text = "Pressione uma tecla..."
+	esperandoTecla = true
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+
+	if esperandoTecla and input.UserInputType == Enum.UserInputType.Keyboard then
+		toggleKey = input.KeyCode
+		ToggleBtn.Text = "Ativar Voo ("..toggleKey.Name..")"
+		ChangeKeyBtn.Text = "Trocar Tecla"
+		esperandoTecla = false
+		return
+	end
+
+	if input.KeyCode == toggleKey then
+		toggleFly()
+	end
+end)
+
+-- Movimento
+local function updateMoveVector()
+	local cam = workspace.CurrentCamera
+	local look = cam.CFrame.LookVector
+	local right = cam.CFrame.RightVector
+	local up = Vector3.new(0,1,0)
+
+	local forward = 0
+	local rightVal = 0
+	local upVal = 0
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then forward += 1 end
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then forward -= 1 end
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then rightVal -= 1 end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then rightVal += 1 end
+	if UserInputService:IsKeyDown(Enum.KeyCode.Space) then upVal += 1 end
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then upVal -= 1 end
+
+	local dir = (look * forward + right * rightVal + up * upVal)
+	moveVector = dir.Magnitude > 0 and dir.Unit or Vector3.new()
+end
+
+RunService.RenderStepped:Connect(function()
+	if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") or not player.Character:FindFirstChild("Humanoid") then
+		character = player.Character or player.CharacterAdded:Wait()
+		humanoid = character:WaitForChild("Humanoid")
+		rootPart = character:WaitForChild("HumanoidRootPart")
+	end
+
+	if flying then
+		updateMoveVector()
+		local cam = workspace.CurrentCamera
+		local _, y, _ = cam.CFrame.Rotation:ToEulerAnglesYXZ()
+		rootPart.CFrame = CFrame.new(rootPart.Position) * CFrame.Angles(0, y, 0)
+		rootPart.AssemblyLinearVelocity = moveVector * speed
+		humanoid.AutoRotate = false
+	else
+		humanoid.AutoRotate = true
+	end
+end)
