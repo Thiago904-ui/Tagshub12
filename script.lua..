@@ -1,0 +1,122 @@
+-- Tags Fly Mobile (Somente para Mobile) | Sem bypass de queda
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
+
+local flying = false
+local speed = 50
+
+-- Interface
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TagsFlyMobile"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 160)
+Frame.Position = UDim2.new(0, 20, 0.4, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.Active = true
+Frame.Draggable = true
+
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Text = "Tags Fly Mobile"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 0, 0, 5)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+
+local ToggleButton = Instance.new("TextButton", Frame)
+ToggleButton.Text = "Ativar Fly"
+ToggleButton.Size = UDim2.new(0.9, 0, 0, 35)
+ToggleButton.Position = UDim2.new(0.05, 0, 0, 45)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.Font = Enum.Font.Gotham
+ToggleButton.TextSize = 16
+
+local SpeedLabel = Instance.new("TextLabel", Frame)
+SpeedLabel.Text = "Velocidade: " .. speed
+SpeedLabel.Size = UDim2.new(1, -20, 0, 25)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 85)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.new(1,1,1)
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextSize = 14
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local PlusButton = Instance.new("TextButton", Frame)
+PlusButton.Text = "+"
+PlusButton.Size = UDim2.new(0, 40, 0, 30)
+PlusButton.Position = UDim2.new(0, 150, 0, 115)
+PlusButton.BackgroundColor3 = Color3.fromRGB(30, 130, 30)
+PlusButton.TextColor3 = Color3.new(1,1,1)
+PlusButton.Font = Enum.Font.GothamBold
+PlusButton.TextSize = 20
+
+local MinusButton = Instance.new("TextButton", Frame)
+MinusButton.Text = "-"
+MinusButton.Size = UDim2.new(0, 40, 0, 30)
+MinusButton.Position = UDim2.new(0, 60, 0, 115)
+MinusButton.BackgroundColor3 = Color3.fromRGB(130, 30, 30)
+MinusButton.TextColor3 = Color3.new(1,1,1)
+MinusButton.Font = Enum.Font.GothamBold
+MinusButton.TextSize = 20
+
+-- Fly control
+local moveVector = Vector3.zero
+
+local function updateFlyMovement()
+	if not flying then return end
+
+	local moveDir = humanoid.MoveDirection
+	local camLook = camera.CFrame.LookVector
+
+	if moveDir.Magnitude > 0 then
+		local yDir = 0
+		if camLook.Y > 0.4 then
+			yDir = 1
+		elseif camLook.Y < -0.4 then
+			yDir = -1
+		end
+		moveVector = Vector3.new(moveDir.X, yDir, moveDir.Z).Unit * speed
+	else
+		moveVector = Vector3.zero
+	end
+
+	rootPart.AssemblyLinearVelocity = moveVector
+end
+
+RunService.RenderStepped:Connect(function()
+	if flying then
+		updateFlyMovement()
+	end
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+	flying = not flying
+	ToggleButton.Text = flying and "Desativar Fly" or "Ativar Fly"
+	ToggleButton.BackgroundColor3 = flying and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(70,70,70)
+end)
+
+PlusButton.MouseButton1Click:Connect(function()
+	speed = math.clamp(speed + 10, 10, 200)
+	SpeedLabel.Text = "Velocidade: " .. speed
+end)
+
+MinusButton.MouseButton1Click:Connect(function()
+	speed = math.clamp(speed - 10, 10, 200)
+	SpeedLabel.Text = "Velocidade: " .. speed
+end)
